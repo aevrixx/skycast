@@ -1,0 +1,363 @@
+/* ==========================================================================
+   style.css  -  Skycast
+
+   1.  Themes (each weather mood has its own colours)
+   2.  Page basics
+   3.  Top bar, search, chips
+   4.  Hero card
+   5.  The animated sky scene (sun, moon, clouds, rain, snow, stars, lightning)
+   6.  Stat cards (rings, compass, sun bar)
+   7.  Hourly forecast
+   8.  7-day forecast
+   9.  Landing page, footer
+   10. Animations, phones, accessibility
+   ========================================================================== */
+
+
+/* 1. THEMES -----------------------------------------------------------------
+   The <body> gets a class like "theme-rain-night". Each theme just sets the
+   same few variables, so the whole page re-colours itself.
+     --sky-top / --sky-mid / --sky-bot : the three stops of the background
+     --accent : highlight colour for rings, bars and the sun/moon
+     --cloud  : colour of the clouds                                          */
+.theme-clear-day     { --sky-top: #1553c9; --sky-mid: #2f86e8; --sky-bot: #ff9a5c; --accent: #ffd23f; --cloud: #ffffff; }
+.theme-clear-night   { --sky-top: #070b24; --sky-mid: #182163; --sky-bot: #4a2c86; --accent: #ffe9a8; --cloud: #8d97c4; }
+.theme-cloudy-day    { --sky-top: #3f5f86; --sky-mid: #6f8fb2; --sky-bot: #a8bdd3; --accent: #ffe08a; --cloud: #f4f7fb; }
+.theme-cloudy-night  { --sky-top: #0f1626; --sky-mid: #223049; --sky-bot: #3a4a66; --accent: #9fc2ff; --cloud: #6c7a96; }
+.theme-rain-day      { --sky-top: #1c3550; --sky-mid: #2d6283; --sky-bot: #5b97ac; --accent: #7fdcff; --cloud: #b7c3d1; }
+.theme-rain-night    { --sky-top: #0a1624; --sky-mid: #15364f; --sky-bot: #245a73; --accent: #6fd3ff; --cloud: #7d8ca0; }
+.theme-storm-day,
+.theme-storm-night   { --sky-top: #160f2b; --sky-mid: #32245a; --sky-bot: #5a3f87; --accent: #ffe14d; --cloud: #8f86a8; }
+.theme-snow-day      { --sky-top: #3d5f89; --sky-mid: #7ea3cb; --sky-bot: #c4dcf1; --accent: #ffffff; --cloud: #ffffff; }
+.theme-snow-night    { --sky-top: #101c33; --sky-mid: #2b4569; --sky-bot: #5a7ea6; --accent: #dff1ff; --cloud: #a9bdd6; }
+.theme-fog-day       { --sky-top: #4d5866; --sky-mid: #7b8896; --sky-bot: #aab4bf; --accent: #ffffff; --cloud: #d4dae0; }
+.theme-fog-night     { --sky-top: #1b2029; --sky-mid: #343c49; --sky-bot: #566070; --accent: #c9d3e0; --cloud: #8a95a5; }
+
+:root {
+  --font-display: "Sora", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Figtree", "Segoe UI", Arial, sans-serif;
+  --glass: rgba(10, 16, 40, 0.40);          /* dark frosted glass behind text */
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --text: #ffffff;
+  --text-soft: rgba(255, 255, 255, 0.78);
+  --radius: 1.5rem;
+}
+
+
+/* 2. PAGE BASICS ----------------------------------------------------------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  /* The sky. "fixed" keeps it still while the content scrolls. */
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bot) 100%) fixed;
+}
+
+.page { max-width: 68rem; margin: 0 auto; padding: 1.25rem 1.25rem 3rem; }
+
+h1, h2, p, ul, ol, dl { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+a { color: inherit; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* Frosted-glass card used everywhere */
+.card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.4rem;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+/* minmax(0, 1fr) lets the column shrink to the screen. Without it, the wide hourly
+   strip would stretch the whole page sideways. */
+main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; margin-top: 1.5rem; }
+
+.label { margin: 1.25rem 0 0.6rem; color: var(--text-soft); font-weight: 600; font-size: 0.95rem; }
+
+
+/* 3. TOP BAR, SEARCH, CHIPS ----------------------------------------------- */
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; }
+.brand-icon { font-size: 1.6rem; }
+
+.topbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+.pill-link {
+  padding: 0.5rem 1rem; border-radius: 999px; text-decoration: none; font-weight: 700; font-size: 0.95rem;
+  background: var(--accent); color: #14183a;
+  transition: transform 0.15s;
+}
+.pill-link:hover { transform: translateY(-2px) rotate(-2deg); }
+
+/* The °C / °F switch */
+.units { display: flex; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 999px; padding: 0.2rem; }
+.units a { padding: 0.35rem 0.9rem; border-radius: 999px; text-decoration: none; font-weight: 700; color: var(--text-soft); }
+.units a.active { background: #fff; color: #14183a; }
+
+/* Search bar */
+.search { display: flex; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 999px; padding: 0.4rem;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+.search input[type="search"] {
+  flex: 1; min-width: 0; padding: 0.7rem 1.2rem; background: transparent; border: 0; color: var(--text);
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 400;
+}
+.search input::placeholder { color: var(--text-soft); }
+.search input:focus { outline: none; }
+.search:focus-within { outline: 3px solid var(--accent); outline-offset: 3px; }
+.search button {
+  padding: 0 1.6rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--accent); color: #14183a; font-family: var(--font-display); font-weight: 600; font-size: 1rem;
+  transition: transform 0.15s;
+}
+.search button:hover { transform: scale(1.05); }
+
+.alert { margin-top: 1rem; padding: 1rem 1.25rem; border-radius: 1rem; background: rgba(255, 90, 90, 0.35); border: 1px solid rgba(255, 150, 150, 0.6); }
+
+/* Clickable city "chips" */
+.chips { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+.chips a {
+  display: flex; flex-direction: column; padding: 0.55rem 1.1rem; border-radius: 1rem; text-decoration: none;
+  background: var(--glass); border: 1px solid var(--glass-border); font-weight: 700; line-height: 1.25;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  transition: transform 0.15s, background 0.15s;
+}
+.chips a small { font-weight: 400; color: var(--text-soft); font-size: 0.8rem; }
+.chips a:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.22); }
+
+
+/* 4. HERO CARD ------------------------------------------------------------- */
+.hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.5rem; align-items: center; padding: 2rem; }
+
+.place { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; }
+.place small { display: block; font-family: var(--font-body); font-weight: 400; font-size: 0.95rem; color: var(--text-soft); }
+.when { color: var(--text-soft); margin-top: 0.25rem; }
+
+.temp { font-family: var(--font-display); font-weight: 200; font-size: clamp(5.5rem, 17vw, 9rem); line-height: 1; letter-spacing: -0.05em; margin-top: 0.8rem; }
+.deg { font-size: 0.35em; font-weight: 400; letter-spacing: 0; vertical-align: top; position: relative; top: 0.3em; margin-left: 0.1em; }
+
+.condition { font-family: var(--font-display); font-size: 1.6rem; font-weight: 600; margin-top: 0.25rem; }
+.meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; margin-top: 0.8rem; color: var(--text-soft); }
+.meta b { color: var(--text); }
+
+.tips { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+.tips li {
+  padding: 0.6rem 1.1rem; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); font-weight: 600;
+}
+
+
+/* 5. THE ANIMATED SKY SCENE ------------------------------------------------- */
+.hero-scene { display: flex; justify-content: center; }
+
+.scene {
+  position: relative; width: 100%; max-width: 21rem; aspect-ratio: 1;
+  border-radius: 2rem; overflow: hidden;           /* clips rain and clouds at the edges */
+  background: rgba(255, 255, 255, 0.07); border: 1px solid var(--glass-border);
+}
+
+/* --- Sun and moon --- */
+.orb { position: absolute; top: 18%; right: 22%; width: 34%; aspect-ratio: 1; border-radius: 50%; }
+
+.orb.sun {
+  background: radial-gradient(circle at 35% 35%, #fff6b0, var(--accent) 60%, #ffb020);
+  box-shadow: 0 0 60px 20px rgba(255, 210, 63, 0.5);
+}
+/* Rotating rays: a repeating cone gradient with a ring-shaped mask */
+.orb.sun::before {
+  content: ""; position: absolute; inset: -45%; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 230, 120, 0.45) 0 6deg, transparent 6deg 20deg);
+  -webkit-mask: radial-gradient(circle, transparent 28%, #000 30%, #000 50%, transparent 60%);
+          mask: radial-gradient(circle, transparent 28%, #000 30%, #000 50%, transparent 60%);
+  animation: spin 40s linear infinite;
+}
+
+.orb.moon {
+  background:
+    radial-gradient(circle at 62% 30%, rgba(0, 0, 0, 0.09) 0 9%, transparent 10%),
+    radial-gradient(circle at 36% 62%, rgba(0, 0, 0, 0.09) 0 13%, transparent 14%),
+    radial-gradient(circle at 35% 35%, #fffbe8, #f1e6b8 65%, #d8cc9a);
+  box-shadow: 0 0 50px 12px rgba(255, 246, 214, 0.35);
+}
+
+/* --- Stars --- */
+.star { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; animation: twinkle 3s ease-in-out infinite; }
+
+/* --- Clouds: one div + two circles (::before and ::after) --- */
+.cloud {
+  position: absolute; width: 7.5rem; height: 2.6rem; border-radius: 2.6rem; background: var(--cloud);
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.18));
+  animation: drift 12s ease-in-out infinite alternate;
+}
+.cloud::before, .cloud::after { content: ""; position: absolute; background: var(--cloud); border-radius: 50%; }
+.cloud::before { width: 3.5rem; height: 3.5rem; top: -1.7rem; left: 1.1rem; }
+.cloud::after  { width: 4.4rem; height: 4.4rem; top: -2.2rem; left: 3.1rem; }
+.cloud.c1 { top: 46%; left: 10%; }
+.cloud.c2 { top: 66%; left: 48%; transform: scale(0.85); animation-duration: 16s; animation-direction: alternate-reverse; }
+.cloud.c3 { top: 28%; left: 24%; transform: scale(0.7);  animation-duration: 20s; }
+
+/* --- Fog --- */
+.fog-band { position: absolute; left: -20%; width: 140%; height: 2rem; border-radius: 2rem; background: rgba(255, 255, 255, 0.28); filter: blur(6px); animation: drift 14s ease-in-out infinite alternate; }
+.fog-band.f1 { top: 55%; }
+.fog-band.f2 { top: 70%; animation-duration: 18s; animation-direction: alternate-reverse; }
+.fog-band.f3 { top: 85%; animation-duration: 22s; }
+
+/* --- Rain --- */
+.drop { position: absolute; top: -12%; width: 2px; height: 1.4rem; border-radius: 2px; background: linear-gradient(transparent, var(--accent)); opacity: 0.8; animation: fall linear infinite; }
+
+/* --- Snow --- */
+.flake { position: absolute; top: -6%; border-radius: 50%; background: #fff; opacity: 0.9; animation: snowfall linear infinite; }
+.flake.s0 { width: 5px; height: 5px; }
+.flake.s1 { width: 8px; height: 8px; }
+.flake.s2 { width: 11px; height: 11px; opacity: 0.7; }
+
+/* --- Lightning --- */
+.flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: flash 6s infinite; }
+.bolt {
+  position: absolute; top: 18%; left: 42%; width: 22%; aspect-ratio: 0.6; background: var(--accent);
+  clip-path: polygon(55% 0, 15% 55%, 45% 55%, 30% 100%, 90% 38%, 55% 38%, 78% 0);
+  filter: drop-shadow(0 0 10px var(--accent)); opacity: 0; animation: bolt 6s infinite;
+}
+
+
+/* 6. STAT CARDS ------------------------------------------------------------- */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }   /* 4 small cards per row */
+.stat { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.7rem; transition: transform 0.2s; }
+.stat:hover { transform: translateY(-4px); }
+.stat h2 { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-soft); }
+.stat-note { color: var(--text-soft); font-size: 0.95rem; }
+.stat-note b { color: var(--text); }
+.big { font-family: var(--font-display); font-size: 3rem; font-weight: 200; line-height: 1.1; padding: 0.7rem 0; }
+
+/* Ring gauge: a conic-gradient coloured up to --pct percent, then a hole cut out with a mask */
+.ring { position: relative; width: 6.5rem; aspect-ratio: 1; display: grid; place-items: center; font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; }
+.ring::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--pct) * 1%), rgba(255, 255, 255, 0.2) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 calc(100% - 9px));
+}
+.ring span { position: relative; }
+
+/* Compass */
+.compass { position: relative; width: 6.5rem; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); font-size: 0.7rem; font-weight: 700; color: var(--text-soft); }
+.compass > span { position: absolute; }
+.compass .n { top: 4px; left: 50%; transform: translateX(-50%); }
+.compass .s { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.compass .e { right: 6px; top: 50%; transform: translateY(-50%); }
+.compass .w { left: 6px; top: 50%; transform: translateY(-50%); }
+.needle { position: absolute; inset: 16%; background: var(--accent); clip-path: polygon(50% 0, 68% 100%, 50% 82%, 32% 100%); transition: transform 0.6s; }
+
+/* Sun progress bar */
+.sun-card { grid-column: 1 / -1; }   /* full width row under the four small cards */
+.sun-times { display: flex; justify-content: space-between; width: 100%; font-size: 1.05rem; }
+.sun-track { position: relative; width: 100%; height: 0.7rem; margin: 0.8rem 0; border-radius: 999px; background: rgba(255, 255, 255, 0.2); }
+.sun-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #ff9a5c, var(--accent)); }
+.sun-dot { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; filter: drop-shadow(0 0 8px var(--accent)); }
+
+
+/* 7. HOURLY FORECAST -------------------------------------------------------- */
+.section-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
+.section-title small { font-family: var(--font-body); font-weight: 400; font-size: 0.85rem; color: var(--text-soft); margin-left: 0.5rem; }
+
+.hours { display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.8rem; scroll-snap-type: x proximity; }
+.hour {
+  flex: 0 0 4.6rem; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.8rem 0.3rem;
+  border-radius: 1.2rem; scroll-snap-align: start; transition: background 0.15s, transform 0.15s;
+}
+.hour:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-4px); }
+.hour.is-now { background: rgba(255, 255, 255, 0.2); outline: 2px solid var(--accent); }
+.hour-time { font-size: 0.85rem; color: var(--text-soft); white-space: nowrap; }
+.hour-icon { font-size: 1.6rem; }
+.hour-temp { font-family: var(--font-display); font-weight: 600; }
+.hour-bar { position: relative; width: 0.55rem; height: 4.5rem; border-radius: 999px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.hour-bar::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--h); border-radius: 999px; background: linear-gradient(0deg, var(--accent), #ff7a59); }
+.hour-rain { font-size: 0.8rem; color: var(--text-soft); }
+
+
+/* 8. 7-DAY FORECAST --------------------------------------------------------- */
+.days { display: grid; gap: 0.4rem; }
+.day { border-radius: 1.1rem; transition: background 0.15s; }
+.day:hover, .day[open] { background: rgba(255, 255, 255, 0.1); }
+
+.day summary {
+  display: grid; grid-template-columns: 8rem 2rem 4.2rem 2.5rem 1fr 2.5rem 1.2rem; align-items: center; gap: 0.7rem;
+  padding: 0.8rem 1rem; cursor: pointer; list-style: none;
+}
+.day summary::-webkit-details-marker { display: none; }     /* hide Safari's default arrow */
+.day-name { font-weight: 700; }
+.day-name small { display: block; font-weight: 400; font-size: 0.8rem; color: var(--text-soft); }
+.day-icon { font-size: 1.5rem; }
+.day-rain { font-size: 0.85rem; color: var(--text-soft); }
+.day-low { text-align: right; color: var(--text-soft); }
+.day-high { font-weight: 700; }
+
+/* The temperature range bar: --left and width are set per day from Python */
+.range { position: relative; height: 0.55rem; border-radius: 999px; background: rgba(255, 255, 255, 0.18); }
+.range-fill { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, #6fd3ff, var(--accent), #ff7a59); }
+
+.chev { transition: transform 0.25s; }
+.day[open] .chev { transform: rotate(180deg); }
+
+.day-body { padding: 0.2rem 1rem 1rem; animation: reveal-down 0.3s ease-out; }
+.day-label { font-weight: 600; margin-bottom: 0.6rem; }
+.day-body dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.6rem; }
+.day-body dl div { background: rgba(255, 255, 255, 0.08); border-radius: 0.9rem; padding: 0.6rem 0.8rem; }
+.day-body dt { font-size: 0.8rem; color: var(--text-soft); }
+.day-body dd { margin: 0; font-weight: 700; }
+
+
+/* 9. LANDING PAGE AND FOOTER ------------------------------------------------ */
+.landing { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; align-items: center; }
+.landing h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(2.8rem, 9vw, 5.5rem); line-height: 1.02; letter-spacing: -0.03em; }
+.landing-text p { margin-top: 1rem; font-size: 1.25rem; color: var(--text-soft); max-width: 24rem; }
+
+.footer { margin-top: 3rem; text-align: center; font-size: 0.9rem; color: var(--text-soft); }
+
+
+/* 10. ANIMATIONS, PHONES, ACCESSIBILITY ------------------------------------- */
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes drift    { from { translate: -1.5rem 0; } to { translate: 2.5rem 0; } }
+@keyframes fall     { to { transform: translateY(26rem); } }
+@keyframes snowfall { 0% { transform: translate(0, 0); } 50% { transform: translate(14px, 13rem); } 100% { transform: translate(-6px, 26rem); } }
+@keyframes twinkle  { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+@keyframes flash    { 0%, 90%, 100% { opacity: 0; } 91% { opacity: 0.55; } 93% { opacity: 0; } 95% { opacity: 0.4; } 97% { opacity: 0; } }
+@keyframes bolt     { 0%, 90%, 100% { opacity: 0; } 91%, 95% { opacity: 1; } 93% { opacity: 0.2; } 97% { opacity: 0; } }
+@keyframes reveal-down { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* Cards slide up one after another. --i is set in the HTML (0, 1, 2...) */
+.reveal { animation: rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+/* Tablets and phones */
+@media (max-width: 52rem) {
+  .hero, .landing { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }   /* 2 per row on tablets and phones */
+  .hero { padding: 1.4rem; }
+  .day summary { grid-template-columns: 1fr 2rem 3.6rem 2.2rem 5rem 2.2rem 1rem; gap: 0.4rem; padding: 0.7rem 0.6rem; }
+}
+@media (max-width: 34rem) {
+  .topbar { justify-content: center; }
+  .day summary { grid-template-columns: 1fr 2rem 2.2rem 4rem 2.2rem 1rem; }
+  .day-rain { display: none; }
+}
+
+/* Keyboard users get a clear outline */
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* If the device asks for less motion, switch the animations off */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

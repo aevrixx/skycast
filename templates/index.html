@@ -1,0 +1,286 @@
+{# ===========================================================================
+   index.html  -  the Skycast page.
+
+   Jinja2 reminder: double curly braces print a value, curly-percent tags run
+   logic, and curly-hash blocks like this one are comments the browser never sees.
+
+   Python (main.py) sends us:
+     weather        all the weather data, or None on the landing page
+     error          a friendly error message, or None
+     theme          e.g. "rain-night" (picks the colours in style.css)
+     is_day, scene  what to draw in the animated picture
+     popular, recents, alternatives   lists of places we can link to
+   =========================================================================== #}
+
+{# ------- A MACRO is a reusable chunk of template, like a function.
+          This  draws the animated sky picture from the 'scene' settings. ------- #}
+{%- macro sky_scene(scene, is_day) -%}
+
+<div class="scene" aria-hidden="true">
+
+  {# Stars: only on clear-ish nights #}
+  {% if not is_day and scene.clouds < 3 and not scene.rain and not scene.snow %}
+    {% for i in range(28) %}
+      <span class="star" style="left: {{ (i * 53 + 7) % 100 }}%; top: {{ (i * 29 + 13) % 65 }}%; animation-delay: {{ ((i % 7) * 0.4) | round(1) }}s"></span>
+    {% endfor %}
+  {% endif %}
+
+  {# Sun (day) or moon (night) #}
+  {% if scene.orb %}
+    <div class="orb {{ 'sun' if is_day else 'moon' }}"></div>
+  {% endif %}
+
+  {# Fog bands #}
+  {% if scene.fog %}
+    <div class="fog-band f1"></div><div class="fog-band f2"></div><div class="fog-band f3"></div>
+  {% endif %}
+
+  {# Clouds: Python says how many (0 to 3) #}
+  {% for i in range(scene.clouds) %}
+    <div class="cloud c{{ i + 1 }}"></div>
+  {% endfor %}
+
+  {# Rain: one little streak per drop. The maths below scatters them across the
+     width and gives each a different speed, so they don't fall in a straight line. #}
+  {% for i in range(scene.rain) %}
+    <span class="drop" style="left: {{ (i * 37 + 11) % 100 }}%; animation-delay: -{{ ((i * 7) % 10 / 10) | round(1) }}s; animation-duration: {{ (0.6 + (i % 5) * 0.12) | round(2) }}s"></span>
+  {% endfor %}
+
+  {# Snow #}
+  {% for i in range(scene.snow) %}
+    <span class="flake s{{ i % 3 }}" style="left: {{ (i * 41 + 5) % 100 }}%; animation-delay: -{{ ((i * 3) % 9) }}s; animation-duration: {{ 5 + (i % 4) }}s"></span>
+  {% endfor %}
+
+  {# Lightning #}
+  {% if scene.bolt %}
+    <div class="flash"></div><div class="bolt"></div>
+  {% endif %}
+</div>
+{%- endmacro -%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if weather %}{{ weather.now.temp }}{{ weather.units.temp }} in {{ weather.place.name }} | Skycast{% else %}Skycast | Weather, beautifully{% endif %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛅</text></svg>">
+
+  {# Fonts from Google (the CSS has backups if they can't load) #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Sora:wght@200;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+
+{# The theme class (e.g. theme-rain-night) switches the whole colour palette #}
+<body class="theme-{{ theme }}">
+<div class="page">
+
+  {# ================= TOP BAR ================= #}
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-icon" aria-hidden="true">⛅</span> Skycast</a>
+
+    <div class="topbar-actions">
+      <a class="pill-link" href="{{ random_url }}">🎲 Surprise me</a>
+
+      {# The °C / °F switch: two links, the active one is highlighted #}
+      <nav class="units" aria-label="Temperature units">
+        <a href="{{ metric_url }}"   class="{{ 'active' if units == 'metric' }}"   {% if units == 'metric' %}aria-current="true"{% endif %}>°C</a>
+        <a href="{{ imperial_url }}" class="{{ 'active' if units == 'imperial' }}" {% if units == 'imperial' %}aria-current="true"{% endif %}>°F</a>
+      </nav>
+    </div>
+  </header>
+
+  {# ================= SEARCH ================= #}
+  <form class="search reveal" style="--i: 0" action="/" method="get" role="search">
+    <label class="sr-only" for="q">Search for a city</label>
+    <input id="q" name="q" type="search" value="{{ q }}" placeholder="Search a city…"
+           autocomplete="off" {% if not weather %}autofocus{% endif %}>
+    {# Hidden field: keeps your chosen units when you search again #}
+    <input type="hidden" name="units" value="{{ units }}">
+    <button type="submit">Search</button>
+  </form>
+
+  {#  ERROR MESSAGE  #}
+  {% if error %}
+    <div class="alert reveal" style="--i: 1" role="alert">⚠️ {{ error }}</div>
+  {% endif %}
+
+  {# Other places with the same name, e.g. you typed "Springfield" #}
+  {% if alternatives %}
+    <section class="reveal" style="--i: 1">
+      <p class="label">Not the right place? Try:</p>
+      <ul class="chips">
+        {% for p in alternatives %}
+          <li><a href="{{ p.url }}">{{ p.name }}<small>{{ p.region or p.country }}</small></a></li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <main>
+  {% if weather %}
+    {#  THE DASHBOARD  #}
+    {% set now = weather.now %}
+    {% set today = weather.today %}
+    {% set u = weather.units %}
+
+    {# ---------- HERO: big temperature + animated sky ---------- #}
+    <section class="hero card reveal" style="--i: 2">
+      <div class="hero-text">
+        <p class="place">📍 {{ weather.place.name }}
+          <small>{{ weather.place.region or weather.place.country }}{% if weather.place.region and weather.place.country %}, {{ weather.place.country }}{% endif %}</small>
+        </p>
+        <p class="when">{{ now.date_text }} · {{ now.time_text }}</p>
+        <p class="temp">{{ now.temp }}<span class="deg">{{ u.temp }}</span></p>
+        <p class="condition"><span aria-hidden="true">{{ now.icon }}</span> {{ now.label }}</p>
+        <p class="meta">
+          <span>Feels like <b>{{ now.feels }}°</b></span>
+          <span>High <b>{{ today.high }}°</b></span>
+          <span>Low <b>{{ today.low }}°</b></span>
+        </p>
+      </div>
+      <div class="hero-scene">{{ sky_scene(scene, is_day) }}</div>
+    </section>
+
+    {# ---------- TIPS ---------- #}
+    <ul class="tips reveal" style="--i: 3">
+      {% for t in weather.tips %}
+        <li><span aria-hidden="true">{{ t.icon }}</span> {{ t.text }}</li>
+      {% endfor %}
+    </ul>
+
+    {# ---------- STAT CARDS ---------- #}
+    <section class="stats">
+
+      {# Humidity: a ring whose fill is set by the --pct variable #}
+      <article class="card stat reveal" style="--i: 4">
+        <h2>Humidity</h2>
+        <div class="ring" style="--pct: {{ now.humidity }}"><span>{{ now.humidity }}%</span></div>
+        <p class="stat-note">{{ now.humidity_label }}</p>
+      </article>
+
+      <article class="card stat reveal" style="--i: 5">
+        <h2>UV index</h2>
+        <div class="ring" style="--pct: {{ today.uv_pct }}"><span>{{ today.uv }}</span></div>
+        <p class="stat-note">{{ today.uv_label }} today</p>
+      </article>
+
+      {# Wind: the needle is rotated by the wind direction #}
+      <article class="card stat reveal" style="--i: 6">
+        <h2>Wind</h2>
+        <div class="compass">
+          <span class="n">N</span><span class="e">E</span><span class="s">S</span><span class="w">W</span>
+          <div class="needle" style="transform: rotate({{ now.wind_to }}deg)"></div>
+        </div>
+        <p class="stat-note"><b>{{ now.wind }} {{ u.wind }}</b> from {{ now.wind_from }}</p>
+      </article>
+
+      <article class="card stat reveal" style="--i: 7">
+        <h2>Rain</h2>
+        <p class="big">{{ today.rain_chance }}%</p>
+        <p class="stat-note">chance today<br>{{ now.precip }} {{ u.rain }} right now</p>
+      </article>
+
+      {# Sun: a progress bar showing how far through the day we are #}
+      <article class="card stat sun-card reveal" style="--i: 8">
+        <h2>Sun</h2>
+        <div class="sun-times">
+          <span>🌅 <b>{{ today.sunrise }}</b></span>
+          <span>🌇 <b>{{ today.sunset }}</b></span>
+        </div>
+        <div class="sun-track" role="img" aria-label="Sun position">
+          <div class="sun-fill" style="width: {{ today.sun_pct }}%"></div>
+          <div class="sun-dot" style="left: {{ today.sun_pct }}%">{{ '☀️' if today.sun_up else '🌙' }}</div>
+        </div>
+        <p class="stat-note">{{ today.daylight }} of daylight</p>
+      </article>
+    </section>
+
+    {# ---------- NEXT 24 HOURS ---------- #}
+    <section class="card reveal" style="--i: 9">
+      <h2 class="section-title">Next 24 hours <small>swipe or scroll →</small></h2>
+      <ol class="hours">
+        {% for h in weather.hourly %}
+          <li class="hour {{ 'is-now' if loop.first }}">
+            <span class="hour-time">{{ h.label }}</span>
+            <span class="hour-icon" aria-hidden="true">{{ h.icon }}</span>
+            <span class="hour-temp">{{ h.temp }}°</span>
+            {# --h sets the height of the coloured bar #}
+            <span class="hour-bar" style="--h: {{ h.bar }}%"></span>
+            <span class="hour-rain">💧 {{ h.rain }}%</span>
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    {# ---------- NEXT 7 DAYS ---------- #}
+    <section class="card reveal" style="--i: 10">
+      <h2 class="section-title">7-day forecast <small>tap a day for details</small></h2>
+      <div class="days">
+        {# <details> is built-in HTML: click to open, no JavaScript needed #}
+        {% for d in weather.daily %}
+          <details class="day" {{ 'open' if loop.first }}>
+            <summary>
+              <span class="day-name">{{ d.day }}<small>{{ d.date }}</small></span>
+              <span class="day-icon" aria-hidden="true">{{ d.icon }}</span>
+              <span class="day-rain">💧 {{ d.rain }}%</span>
+              <span class="day-low">{{ d.low }}°</span>
+              <span class="range"><span class="range-fill" style="left: {{ d.left }}%; width: {{ d.width }}%"></span></span>
+              <span class="day-high">{{ d.high }}°</span>
+              <span class="chev" aria-hidden="true">▾</span>
+            </summary>
+            <div class="day-body">
+              <p class="day-label">{{ d.icon }} {{ d.label }}</p>
+              <dl>
+                <div><dt>Sunrise</dt><dd>🌅 {{ d.sunrise }}</dd></div>
+                <div><dt>Sunset</dt><dd>🌇 {{ d.sunset }}</dd></div>
+                <div><dt>UV</dt><dd>{{ d.uv }} · {{ d.uv_label }}</dd></div>
+                <div><dt>Max wind</dt><dd>{{ d.wind }} {{ u.wind }}</dd></div>
+              </dl>
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+    </section>
+
+  {% else %}
+    {#  LANDING PAGE  #}
+    <section class="landing reveal" style="--i: 1">
+      <div class="landing-text">
+        <h1>Weather<br>Forecast.</h1>
+        <p>Search any city on Earth and watch the sky change with it.</p>
+      </div>
+      <div class="hero-scene">{{ sky_scene(scene, is_day) }}</div>
+    </section>
+
+    {% if recents %}
+      <section class="reveal" style="--i: 2">
+        <p class="label">Recently viewed</p>
+        <ul class="chips">
+          {% for p in recents %}
+            <li><a href="{{ p.url }}">{{ p.name }}<small>{{ p.country }}</small></a></li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <section class="reveal" style="--i: 3">
+      <p class="label">Popular cities</p>
+      <ul class="chips">
+        {% for p in popular %}
+          <li><a href="{{ p.url }}">{{ p.name }}<small>{{ p.country }}</small></a></li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+  </main>
+
+  {# Open-Meteo asks users to credit them #}
+  <footer class="footer">
+    Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a>.
+    Built by aevrixx.
+  </footer>
+</div>
+</body>
+</html>
