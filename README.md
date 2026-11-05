@@ -3,7 +3,7 @@
 A beautiful, animated weather dashboard built with **Python (FastAPI), HTML and CSS only** (no JavaScript).
 
 ![Skycast screenshot](docs/Screenshot%202.png)
-(docs/Screenshot%201.png)
+![Skycast screenshot](docs/Screenshot%201.png)
 
 ## Features
 
