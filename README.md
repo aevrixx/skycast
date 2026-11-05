@@ -19,14 +19,17 @@ A beautiful, animated weather dashboard built with **Python (FastAPI), HTML and 
 
 ```
 skycast/
-├── main.py            # routes (FastAPI)
-├── weather.py         # fetches and shapes weather data
-├── test_weather.py    # tests that run without internet
-├── templates/
-│   └── index.html     # page template (Jinja2)
+├── docs            # screenshots
 ├── static/
 │   └── style.css      # themes, layout, animations
-└── requirements.txt
+├── templates/
+│   └── index.html     # page template (Jinja2)
+├── .gitignore    
+├── main.py            # routes (FastAPI)
+├── README.md           # instructions
+├── requirements.txt            
+├── test_weather.py    # tests that run without internet
+└── weather.py         # fetches and shapes weather data
 ```
 
 ## Run it
